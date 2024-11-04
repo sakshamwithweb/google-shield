@@ -14,7 +14,7 @@ const Actions = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [AudioUrl, setAudioUrl] = useState(null)
   const [languege, setLanguege] = useState("hindi")
-  const [ready,setReady]=useState(false)
+  const [ready, setReady] = useState(false)
   const [speechToText, setSpeechToText] = useState(null)
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -22,50 +22,50 @@ const Actions = () => {
 
   const getLocation = async () => {
     const GPS = () => {
-        return new Promise((resolve, reject) => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        resolve({ lat, lng }); // Resolve with GPS location
-                    },
-                    (error) => {
-                        console.error('GPS error:', error);
-                        reject(error); // Reject on GPS error
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0,
-                    }
-                );
-            } else {
-                reject(new Error("Geolocation not supported"));
+      return new Promise((resolve, reject) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
+              resolve({ lat, lng }); // Resolve with GPS location
+            },
+            (error) => {
+              console.error('GPS error:', error);
+              reject(error); // Reject on GPS error
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0,
             }
-        });
+          );
+        } else {
+          reject(new Error("Geolocation not supported"));
+        }
+      });
     };
 
     try {
-        const gpsLocation = await GPS();
-        setLatitude(gpsLocation.lat);
-        setLongitude(gpsLocation.lng);
-        return gpsLocation; // Return GPS location
+      const gpsLocation = await GPS();
+      setLatitude(gpsLocation.lat);
+      setLongitude(gpsLocation.lng);
+      return gpsLocation; // Return GPS location
     } catch (error) {
-        console.warn("Falling back to API due to error:", error);
+      console.warn("Falling back to API due to error:", error);
     }
 
     // Fallback to fetch location from the API if GPS fails
     const req = await fetch('/api/get/location', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
     if (!req.ok) {
-        console.error('Error fetching location from API:', req.status, req.statusText);
-        return null; // Handle the error appropriately
+      console.error('Error fetching location from API:', req.status, req.statusText);
+      return null; // Handle the error appropriately
     }
 
     const res = await req.json();
@@ -73,7 +73,7 @@ const Actions = () => {
     setLongitude(res.data.lng);
     console.log("Location obtained from API:", res.data);
     return res.data; // Return the location fetched from the API
-};
+  };
 
 
   const getTime = async () => {
@@ -187,8 +187,6 @@ const Actions = () => {
     return res.data
   }
 
-  const getUserSpeech = async () => { }
-
   useEffect(() => {
     if (longitude !== null && latitude !== null) {
       (async () => {
@@ -294,14 +292,40 @@ const Actions = () => {
 
   useEffect(() => {
     if (AudioUrl !== null && languege !== null) {
-      (async () => {
-        const a = await SpeechToText(AudioUrl,languege);
-        console.log(a);
-      })()
-    }
-  }, [AudioUrl])
+      const fetchAudioWithRetry = async (attempts = 25) => {
+        try {
+          const proxyUrl = 'https://google-shield-cors.onrender.com/proxy?url=';
+          const targetUrl = AudioUrl;
 
-  const SpeechToText = async (AUDIO_URL,language) => {
+          const response = await fetch(proxyUrl + targetUrl);
+
+          if (response.ok) {
+            console.log("completed")
+            const result = await SpeechToText(AudioUrl, languege);
+            console.log(result);
+          } else {
+            console.log(response)
+            if (attempts > 0) {
+              setTimeout(() => fetchAudioWithRetry(attempts - 1), 4000);
+            } else {
+              console.error('Max retry attempts reached. Stopping.');
+            }
+          }
+        } catch (error) {
+          if (attempts > 0) {
+            setTimeout(() => fetchAudioWithRetry(attempts - 1), 4000);
+          } else {
+            console.error('Max retry attempts reached. Stopping.');
+          }
+        }
+      };
+
+      fetchAudioWithRetry();
+    }
+  }, [AudioUrl]);
+
+
+  const SpeechToText = async (AUDIO_URL, language) => {
     const req = await fetch('/api/get/speechToText', {
       method: 'POST',
       headers: {
@@ -318,10 +342,10 @@ const Actions = () => {
   }
 
   useEffect(() => {
-    if(speechToText !== null && mode == true){
+    if (speechToText !== null && mode == true) {
       setReady(true)
     }
-  },[speechToText,mode])
+  }, [speechToText, mode])
 
 
   return (
@@ -383,7 +407,7 @@ const Actions = () => {
             {text}
           </Link>
         ))}
-        {ready&&(<>Ready to gooo - {speechToText}</>)}
+        {ready && (<>Ready to gooo - {speechToText}</>)}
       </div>
     </div>
   );
