@@ -21,18 +21,60 @@ const Actions = () => {
 
 
   const getLocation = async () => {
+    const GPS = () => {
+        return new Promise((resolve, reject) => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        resolve({ lat, lng }); // Resolve with GPS location
+                    },
+                    (error) => {
+                        console.error('GPS error:', error);
+                        reject(error); // Reject on GPS error
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0,
+                    }
+                );
+            } else {
+                reject(new Error("Geolocation not supported"));
+            }
+        });
+    };
+
+    try {
+        const gpsLocation = await GPS();
+        setLatitude(gpsLocation.lat);
+        setLongitude(gpsLocation.lng);
+        return gpsLocation; // Return GPS location
+    } catch (error) {
+        console.warn("Falling back to API due to error:", error);
+    }
+
+    // Fallback to fetch location from the API if GPS fails
     const req = await fetch('/api/get/location', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify()
-    })
-    const res = await req.json()
-    setLatitude(res.data.lat)
-    setLongitude(res.data.lng)
-    return res.data
-  }
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!req.ok) {
+        console.error('Error fetching location from API:', req.status, req.statusText);
+        return null; // Handle the error appropriately
+    }
+
+    const res = await req.json();
+    setLatitude(res.data.lat);
+    setLongitude(res.data.lng);
+    console.log("Location obtained from API:", res.data);
+    return res.data; // Return the location fetched from the API
+};
+
 
   const getTime = async () => {
     const req = await fetch('/api/get/time')
@@ -341,7 +383,7 @@ const Actions = () => {
             {text}
           </Link>
         ))}
-        {ready&&(<>Ready to gooo</>)}
+        {ready&&(<>Ready to gooo - {speechToText}</>)}
       </div>
     </div>
   );
