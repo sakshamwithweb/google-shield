@@ -113,6 +113,6 @@ export async function POST(payload) {
         const a = await step3(apiKey, AUDIO_URL, language);
         return NextResponse.json({ data: a });
     } catch (error) {
-        return NextResponse.error();
+        return NextResponse.json({ error })
     }
 }
