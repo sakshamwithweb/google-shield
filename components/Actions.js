@@ -408,7 +408,7 @@ const Actions = () => {
             {text}
           </Link>
         ))}
-        {ready && (<>Ready to gooo - </>)}
+        {ready && (<>Ready to gooo - {speechToText}</>)}
       </div>
     </div>
   );
