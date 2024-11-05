@@ -29,7 +29,8 @@ const step3 = async (apiKey, AUDIO_URL, language) => {
                             console.log(raw)
                             const a = raw.replace("json", '').replace(/`/g, '');
                             const final = JSON.parse(a);
-                            resolve(data)
+                            
+                            resolve({data,apiKey})
                             break;
                         } else {
                             await new Promise(res => setTimeout(res, 500));
