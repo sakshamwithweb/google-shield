@@ -43,10 +43,10 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Audio uploaded successfully', link: audioLink });
     } else {
       console.error('Error uploading file:', response.data);
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+      return NextResponse.error();
     }
   } catch (error) {
     console.error('Error uploading audio:', error);
-    return NextResponse.json({ error: 'Audio upload failed' }, { status: 500 });
+    return NextResponse.error();
   }
 }

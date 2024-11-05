@@ -79,6 +79,6 @@ export async function POST(request) {
         return NextResponse.json({data:safePlaces});
     } catch (error) {
         console.error('Error getting safe locations:', error);
-        return NextResponse.json({ error: 'Failed to get safe locations' }, { status: 500 });
+        return NextResponse.error();
     }
 }
