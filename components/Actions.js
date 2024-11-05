@@ -296,13 +296,12 @@ const Actions = () => {
         try {
           const proxyUrl = 'https://google-shield-cors.onrender.com/proxy?url=';
           const targetUrl = AudioUrl;
-          const sentUrl = proxyUrl + targetUrl
 
           const response = await fetch(proxyUrl + targetUrl);
 
           if (response.ok) {
             console.log("completed")
-            const result = await SpeechToText(sentUrl, languege);
+            const result = await SpeechToText(AudioUrl, languege);
             console.log(result);
           } else {
             console.log(response)
@@ -338,6 +337,7 @@ const Actions = () => {
       })
     })
     const res = await req.json()
+    setSpeechToText(res.data)
     return res.data
   }
 

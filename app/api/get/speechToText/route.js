@@ -9,9 +9,10 @@ const step3 = async (apiKey, AUDIO_URL, language) => {
                         const response = await fetch("https://api.myshell.ai/v1/async_job/get_info", {
                             headers: {
                                 "accept": "*/*",
+                                "accept-language": "en",
                                 "authorization": `Bearer ${apiKey}`,
                                 "content-type": "application/json",
-                                "myshell-client-version": "v1.6.4", // Add back necessary headers
+                                "myshell-client-version": "v1.6.4",
                                 "myshell-service-name": "organics-api",
                                 "priority": "u=1, i",
                                 "Referer": "https://app.myshell.ai/",
@@ -25,10 +26,10 @@ const step3 = async (apiKey, AUDIO_URL, language) => {
 
                         if (data.status === "JOB_STATUS_DONE") {
                             const raw = data.data.message.text;
-                            console.log("Raw response:", raw);
+                            console.log(raw)
                             const a = raw.replace("json", '').replace(/`/g, '');
                             const final = JSON.parse(a);
-                            resolve(final);  // Resolve with parsed final result
+                            resolve(final.text);
                             break;
                         } else {
                             await new Promise(res => setTimeout(res, 500));
@@ -41,21 +42,10 @@ const step3 = async (apiKey, AUDIO_URL, language) => {
                 }
             };
 
-            // Main API call to send the message
-            console.log("Headers being sent:", {
-                "accept": "application/json",
-                "authorization": `Bearer ${apiKey}`,
-                "content-type": "application/json",
-                "myshell-client-version": "v1.6.4",
-                "myshell-service-name": "organics-api",
-                "priority": "u=1, i",
-                "Referer": "https://app.myshell.ai/",
-                "Referrer-Policy": "strict-origin-when-cross-origin"
-            });
-
             const res = await fetch("https://api.myshell.ai/v1/widget/chat/send_message", {
                 headers: {
                     "accept": "application/json",
+                    "accept-language": "en",
                     "authorization": `Bearer ${apiKey}`,
                     "content-type": "application/json",
                     "myshell-client-version": "v1.6.4",
@@ -104,31 +94,25 @@ const step3 = async (apiKey, AUDIO_URL, language) => {
 
                 reject(new Error("jobId not found in the response"));
             } else {
-                // Enhanced error logging for failed response
-                const errorData = await res.json().catch(() => ({}));
-                console.error(`Failed with status code: ${res.status}, error: ${errorData.message || 'Unknown error'}`);
-                reject(new Error(`Failed with status code: ${res.status}, message: ${errorData.message || 'Unknown error'}`));
+                reject(new Error(`Failed with status code: ${res}`));
+                res.json().then(errorData => {
+                    console.error(`Failed with status code: ${res.status}, error: ${errorData.message}`);
+                });
             }
         } catch (error) {
-            console.error("Error in step3 function:", error);
             reject(error);
         }
     });
 };
-
 const apiKey = process.env.MYSHELL_API_KEY;
-
 export async function POST(payload) {
     try {
+
         const data = await payload.json();
         const { AUDIO_URL, language } = data;
-
-        console.log("Starting step3 with:", { AUDIO_URL, language, apiKey: apiKey ? 'Present' : 'Missing' });
-
-        const result = await step3(apiKey, AUDIO_URL, language);
-        return NextResponse.json({ data: result });
+        const a = await step3(apiKey, AUDIO_URL, language);
+        return NextResponse.json({ data: a });
     } catch (error) {
-        console.error("Error in POST handler:", error);
-        return NextResponse.json({ error: error.message });
+        return NextResponse.json({ error })
     }
 }
