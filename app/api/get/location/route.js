@@ -1,4 +1,3 @@
-// app/api/geolocation/route.js
 import { NextResponse } from "next/server";
 
 const Geolocation = async (apiKey) => {

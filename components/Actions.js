@@ -338,7 +338,6 @@ const Actions = () => {
       })
     })
     const res = await req.json()
-    setSpeechToText(res.data)
     return res.data
   }
 
