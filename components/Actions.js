@@ -254,93 +254,47 @@ const Actions = () => {
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
-
+  
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
-
+  
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        // Convert Blob to File
+        const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+        
         const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.mp3');
-
+        formData.append('file', audioFile);  // Use 'file' as the key
+        
         try {
-          const response = await fetch('/api/uploadAudio', {
+          const response = await fetch('/api/get/speechToText', {
             method: 'POST',
             body: formData,
           });
-
+      
           if (response.ok) {
             const data = await response.json();
-            console.log('Audio uploaded successfully with UID:', data.link);
-            setAudioUrl(data.link);
-            return;
+            setSpeechToText(data.transcription);
+            return data.transcription;
           } else {
-            console.error('Audio upload failed');
+            const errorData = await response.json();
+            console.error('Audio upload failed:', errorData);
           }
         } catch (error) {
           console.error('Error uploading audio:', error);
         }
-
-        audioChunksRef.current = [];
+      
+        audioChunksRef.current = [];  // Clear audio chunks
       };
-
+      
+  
       mediaRecorderRef.current.start();
       setIsRecording(true);
     }
   };
-
-  useEffect(() => {
-    if (AudioUrl !== null && languege !== null) {
-      const fetchAudioWithRetry = async (attempts = 25) => {
-        try {
-          const proxyUrl = 'https://google-shield-cors.onrender.com/proxy?url=';
-          const targetUrl = AudioUrl;
-          const sentUrl = proxyUrl + targetUrl
-
-          const response = await fetch(proxyUrl + targetUrl);
-
-          if (response.ok) {
-            console.log("completed")
-            const result = await SpeechToText(sentUrl, languege);
-            console.log(result);
-          } else {
-            console.log(response)
-            if (attempts > 0) {
-              setTimeout(() => fetchAudioWithRetry(attempts - 1), 4000);
-            } else {
-              console.error('Max retry attempts reached. Stopping.');
-            }
-          }
-        } catch (error) {
-          if (attempts > 0) {
-            setTimeout(() => fetchAudioWithRetry(attempts - 1), 4000);
-          } else {
-            console.error('Max retry attempts reached. Stopping.');
-          }
-        }
-      };
-
-      fetchAudioWithRetry();
-    }
-  }, [AudioUrl]);
-
-
-  const SpeechToText = async (AUDIO_URL, language) => {
-    const req = await fetch('/api/get/speechToText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        AUDIO_URL: AUDIO_URL,
-        language: language
-      })
-    })
-    const res = await req.json()
-    setSpeechToText(res.data)
-    return res.data
-  }
+  
+  
 
   useEffect(() => {
     if (speechToText !== null && mode == true) {

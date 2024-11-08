@@ -1,118 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-const step3 = async (apiKey, AUDIO_URL, language) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const checkJobStatus = async (jobId) => {
-                while (true) {
-                    try {
-                        const response = await fetch("https://api.myshell.ai/v1/async_job/get_info", {
-                            headers: {
-                                "accept": "*/*",
-                                "accept-language": "en",
-                                "authorization": `Bearer ${apiKey}`,
-                                "content-type": "application/json",
-                                "myshell-client-version": "v1.6.4",
-                                "myshell-service-name": "organics-api",
-                                "priority": "u=1, i",
-                                "Referer": "https://app.myshell.ai/",
-                                "Referrer-Policy": "strict-origin-when-cross-origin"
-                            },
-                            method: "POST",
-                            body: JSON.stringify({ jobId: jobId })
-                        });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-                        const data = await response.json();
+export async function POST(request) {
+  try {
+    const formData = await request.formData();
+    const audioFile = formData.get('file');  // Retrieve 'file' key
 
-                        if (data.status === "JOB_STATUS_DONE") {
-                            const raw = data.data.message.text;
-                            console.log(raw)
-                            const a = raw.replace("json", '').replace(/`/g, '');
-                            const final = JSON.parse(a);
-                            resolve(final.text);
-                            break;
-                        } else {
-                            await new Promise(res => setTimeout(res, 500));
-                        }
-                    } catch (error) {
-                        console.error("Error in checkJobStatus:", error);
-                        reject(error);
-                        break;
-                    }
-                }
-            };
-
-            const res = await fetch("https://api.myshell.ai/v1/widget/chat/send_message", {
-                headers: {
-                    "accept": "application/json",
-                    "accept-language": "en",
-                    "authorization": `Bearer ${apiKey}`,
-                    "content-type": "application/json",
-                    "myshell-client-version": "v1.6.4",
-                    "myshell-service-name": "organics-api",
-                    "priority": "u=1, i",
-                    "Referer": "https://app.myshell.ai/",
-                    "Referrer-Policy": "strict-origin-when-cross-origin"
-                },
-                body: JSON.stringify({
-                    "widgetId": "1781991624332992512",
-                    "conversation_scenario": 4,
-                    "message": "",
-                    "messageType": 1,
-                    "componentInputMessage": JSON.stringify({
-                        "voice_url": AUDIO_URL,
-                        "chunk_length_s": 30,
-                        "batch_size": 24,
-                        "return_timestamps": false,
-                        "diarize": false,
-                        "language": language
-                    }),
-                }),
-                method: "POST"
-            });
-
-            if (res.ok) {
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let result = "";
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    result += decoder.decode(value, { stream: true });
-                }
-
-                const lines = result.split("\n");
-                for (const line of lines) {
-                    if (line.includes("jobId")) {
-                        const eventData = JSON.parse(line.split("data: ")[1]);
-                        const jobId = eventData.message.asyncJobInfo.jobId;
-                        await checkJobStatus(jobId);
-                        return;
-                    }
-                }
-
-                reject(new Error("jobId not found in the response"));
-            } else {
-                reject(new Error(`Failed with status code: ${res}`));
-                res.json().then(errorData => {
-                    console.error(`Failed with status code: ${res.status}, error: ${errorData.message}`);
-                });
-            }
-        } catch (error) {
-            reject(error);
-        }
-    });
-};
-const apiKey = process.env.MYSHELL_API_KEY;
-export async function POST(payload) {
-    try {
-
-        const data = await payload.json();
-        const { AUDIO_URL, language } = data;
-        const a = await step3(apiKey, AUDIO_URL, language);
-        return NextResponse.json({ data: a });
-    } catch (error) {
-        return NextResponse.json({ error })
+    // Check if the audio file is valid
+    if (!audioFile || (audioFile.type !== 'audio/wav' && audioFile.type !== 'audio/mpeg')) {
+      console.error('Invalid or missing audio file');
+      return NextResponse.json({ error: 'Invalid or missing audio file' }, { status: 400 });
     }
+
+    // Use audioFile directly, assuming it is in a compatible format
+    const response = await openai.audio.transcriptions.create({
+      file: audioFile,  // Use the File object as is
+      model: 'whisper-1',
+      response_format: 'text',
+    });
+
+    const transcriptionText = response.data;
+    return NextResponse.json({ transcription: transcriptionText });
+  } catch (error) {
+    console.error('Error transcribing audio:', error.message || error);
+    return NextResponse.json({ error: 'Failed to process audio file' }, { status: 500 });
+  }
 }
