@@ -254,25 +254,25 @@ const Actions = () => {
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
-  
+
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
-  
+
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         // Convert Blob to File
         const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
-        
+
         const formData = new FormData();
         formData.append('file', audioFile);  // Use 'file' as the key
-        
+
         try {
           const response = await fetch('/api/get/speechToText', {
             method: 'POST',
             body: formData,
           });
-      
+
           if (response.ok) {
             const data = await response.json();
             setSpeechToText(data.transcription);
@@ -284,17 +284,17 @@ const Actions = () => {
         } catch (error) {
           console.error('Error uploading audio:', error);
         }
-      
+
         audioChunksRef.current = [];  // Clear audio chunks
       };
-      
-  
+
+
       mediaRecorderRef.current.start();
       setIsRecording(true);
     }
   };
-  
-  
+
+
 
   useEffect(() => {
     if (speechToText !== null && mode == true) {
@@ -302,6 +302,32 @@ const Actions = () => {
     }
   }, [speechToText, mode])
 
+  useEffect(() => {
+    if (ready == true) {
+      (async () => {
+        sendRequestToAI()
+      })()
+    }
+  }, [ready])
+
+
+  const sendRequestToAI = async () => {
+    const req = await fetch('/api/get/sendRequestToAI', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        speechToText: speechToText,
+        time: time,
+        weather: weather,
+        motion: motion,
+        safePlaces: safePlaces
+      })
+    })
+    const res = await req.json()
+    console.log(res.response)
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-8">
