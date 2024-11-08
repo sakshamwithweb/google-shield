@@ -22,10 +22,8 @@ export async function POST(request) {
       model: 'whisper-1',
       response_format: 'text',
     });
-
-    const transcriptionText = response.data;
-    console.log(response)
-    return NextResponse.json({ transcription: transcriptionText });
+    
+    return NextResponse.json({ transcription: response });
   } catch (error) {
     console.error('Error transcribing audio:', error.message || error);
     return NextResponse.json({ error: 'Failed to process audio file' }, { status: 500 });
